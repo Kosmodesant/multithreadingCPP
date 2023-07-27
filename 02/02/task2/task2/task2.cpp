@@ -1,55 +1,51 @@
 ﻿#include <iostream>
-#include <thread>
-#include <random>
-#include <mutex>
 #include <vector>
 #include <Windows.h>
+#include <thread>
+#include <mutex>
+#include <random>
 
 using namespace std;
 once_flag o_flag;
-mutex mt;
+mutex mtx;
 const int y_position = 15;
 
-
 void once_print() {
-	cout << "Thread\tID\t Progress Bar  \tTime\n";
+	cout << "#\tID\t Progress Bar  \tTime\n";
 }
 
 void cursor_position(int x, int y) {
 	COORD p = { x, y };
 	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), p);
 }
-void completion(int i, int lenght_thread) {
+void completion(int i, int num_threads) {
 
-	for (int j = 1; j <= lenght_thread; j++) {
-		mt.lock();
+	for (int j = 1; j <= num_threads; j++) {
+		mtx.lock();
 		cursor_position((y_position + j), i);
 		this_thread::sleep_for(100ms);
 		cout << "#";
-		mt.unlock();
+		mtx.unlock();
 		this_thread::sleep_for(300ms);
 	}
 	cout << "\t";
 }
 
-void print(int i, int lenght_thread) {
+void print(int i, int num_threads) {
 	auto start = chrono::high_resolution_clock::now();
 	call_once(o_flag, once_print);
-	mt.lock();
+	mtx.lock();
 	cursor_position(0, i);
 	cout << i << "\t" << this_thread::get_id();
-	mt.unlock();
-	completion(i, lenght_thread);
+	mtx.unlock();
+	completion(i, num_threads);
 	auto end = chrono::high_resolution_clock::now();
 	chrono::duration<double> time = end - start;
-	mt.lock();
-	cursor_position((y_position + lenght_thread + 5), i);
+	mtx.lock();
+	cursor_position((y_position + num_threads + 5), i);
 	cout << time.count() << "s";
-	mt.unlock();
+	mtx.unlock();
 }
-
-
-
 
 int main() {
 	int num_threads = 16;
@@ -62,5 +58,7 @@ int main() {
 		t.join();
 	}
 	cursor_position(0, (num_threads + 1));
+	std::cout << "\n";
+	std::cout << "All threads have finished.\n";
 	return 0;
 }
