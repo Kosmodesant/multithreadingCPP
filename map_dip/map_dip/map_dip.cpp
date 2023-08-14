@@ -5,6 +5,7 @@
 #include <functional>
 #include <mutex>
 #include <condition_variable>
+#include <atomic>
 
 class safe_queue {
 private:
@@ -39,9 +40,14 @@ public:
         : stop(false) {
         for (size_t i = 0; i < num_threads; ++i) {
             threads.emplace_back([this] {
-                while (!stop) {
+                while (true) {
                     auto task = task_queue.pop();
-                    task();
+                    if (stop && task == nullptr) {
+                        break;
+                    }
+                    if (task) {
+                        task();
+                    }
                 }
                 });
         }
@@ -49,6 +55,9 @@ public:
 
     ~thread_pool() {
         stop = true;
+        for (size_t i = 0; i < threads.size(); ++i) {
+            task_queue.push(nullptr);  // Signal threads to exit
+        }
         for (auto& thread : threads) {
             thread.join();
         }
